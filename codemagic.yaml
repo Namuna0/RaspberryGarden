@@ -6,6 +6,9 @@ workflows:
 
     environment:
       flutter: stable
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.yourname.raspberrygarden
 
     scripts:
       - name: Get Flutter packages
