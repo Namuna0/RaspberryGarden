@@ -13,7 +13,10 @@ workflows:
           cd raspberry_garden
           flutter pub get
 
-      - name: Build iOS (no codesign)
+      - name: Build iOS IPA (no codesign)
         script: |
           cd raspberry_garden
-          flutter build ios --no-codesign
+          flutter build ipa --release --no-codesign
+
+    artifacts:
+      - raspberry_garden/build/ios/ipa/*.ipa
