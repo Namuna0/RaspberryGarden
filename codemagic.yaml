@@ -21,7 +21,7 @@ workflows:
       - flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
-      - raspberry_garden/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
