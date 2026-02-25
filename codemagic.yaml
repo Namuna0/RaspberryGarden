@@ -21,7 +21,7 @@ workflows:
       - flutter build ipa --release
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - raspberry_garden/build/ios/ipa/*.ipa
 
     publishing:
       app_store_connect:
