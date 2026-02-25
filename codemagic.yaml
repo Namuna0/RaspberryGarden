@@ -13,8 +13,9 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.namuna.raspberrygarden
 
+    working_directory: raspberry_garden
+
     scripts:
-      - cd raspberry_garden
       - flutter pub get
       - xcode-project use-profiles
       - flutter build ipa --release
