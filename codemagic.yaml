@@ -18,7 +18,7 @@ workflows:
     scripts:
       - flutter pub get
       - xcode-project use-profiles
-      - flutter build ipa --release
+      - flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
       - raspberry_garden/build/ios/ipa/*.ipa
@@ -28,4 +28,3 @@ workflows:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        
