@@ -1,6 +1,6 @@
 workflows:
-  ios-adhoc:
-    name: iOS Ad Hoc Build
+  ios-release:
+    name: iOS Release Build
     max_build_duration: 60
     instance_type: mac_mini_m1
 
@@ -10,7 +10,7 @@ workflows:
       groups:
         - app_store_credentials
       ios_signing:
-        distribution_type: ad_hoc
+        distribution_type: app_store
         bundle_identifier: com.namuna.raspberrygarden
 
     working_directory: raspberry_garden
@@ -28,3 +28,27 @@ workflows:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+
+ ios-adhoc:
+    name: iOS Ad Hoc Build (Direct install)
+    max_build_duration: 60
+    instance_type: mac_mini_m1
+
+    environment:
+      flutter: stable
+      xcode: latest
+      groups:
+        - app_store_credentials
+      ios_signing:
+        distribution_type: ad_hoc
+        bundle_identifier: com.namuna.raspberrygarden
+
+    working_directory: raspberry_garden
+
+    scripts:
+      - flutter pub get
+      - xcode-project use-profiles
+      - flutter build ipa --release --export-options-plist=/Users/builder/export_options_adhoc.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
