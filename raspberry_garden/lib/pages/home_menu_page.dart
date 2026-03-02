@@ -50,7 +50,7 @@ class _HomeMenuPageState extends State<HomeMenuPage>
 
     // Discord送信（今まで通り）
     sendDiscordMessage(
-      baseUrl: 'http://localhost:8080',
+      baseUrl: 'https://goddessutarea-production.up.railway.app',
       apiKey: 'API_TEST',
       message: text,
     );
