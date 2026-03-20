@@ -7,33 +7,14 @@ workflows:
     environment:
       xcode: latest
       vars:
-        UNITY_VERSION: 6000.0.39f1
-        UNITY_CHANGESET: 1234567890abcdef   # ←後で説明
+        UNITY_VERSION: 2022.3.22f1
 
       ios_signing:
         distribution_type: ad_hoc
         bundle_identifier: com.namuna.raspberrygarden
 
-    cache:
-      cache_paths:
-        - /Users/builder/Library/Unity
-
     scripts:
-      # Unity Hub CLI
-      - name: Install Unity Hub
-        script: |
-          brew install --cask unity-hub || true
-
-      # Unityインストール
-      - name: Install Unity Editor
-        script: |
-          /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub \
-          -- --headless install \
-          --version $UNITY_VERSION \
-          --changeset $UNITY_CHANGESET \
-          -m ios
-
-      # Unityビルド
+      # Unityビルド（インストール不要想定）
       - name: Build iOS
         script: |
           /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity \
