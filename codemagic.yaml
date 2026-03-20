@@ -7,23 +7,36 @@ workflows:
     environment:
       xcode: latest
       vars:
-        UNITY_VERSION: 6000.0.59f2
+        UNITY_VERSION: 6000.0.39f1
+        UNITY_CHANGESET: 1234567890abcdef   # ←後で説明
 
       ios_signing:
         distribution_type: ad_hoc
         bundle_identifier: com.namuna.raspberrygarden
 
+    cache:
+      cache_paths:
+        - /Users/builder/Library/Unity
+
     scripts:
-      # Unityインストール（GameCI）
-      - name: Install Unity
+      # Unity Hub CLI
+      - name: Install Unity Hub
         script: |
-          curl -L https://github.com/game-ci/unity-install/releases/latest/download/install.sh | bash
-          unity-install --version ${UNITY_VERSION}
+          brew install --cask unity-hub || true
+
+      # Unityインストール
+      - name: Install Unity Editor
+        script: |
+          /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub \
+          -- --headless install \
+          --version $UNITY_VERSION \
+          --changeset $UNITY_CHANGESET \
+          -m ios
 
       # Unityビルド
       - name: Build iOS
         script: |
-          unity-editor \
+          /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity \
           -batchmode -nographics -quit \
           -projectPath . \
           -buildTarget iOS \
