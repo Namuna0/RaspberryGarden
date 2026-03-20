@@ -1,54 +1,45 @@
 workflows:
-  ios-release:
-    name: iOS Release Build
+  unity-ios:
+    name: Unity iOS Build
     max_build_duration: 60
     instance_type: mac_mini_m1
 
     environment:
-      flutter: stable
       xcode: latest
-      groups:
-        - app_store_credentials
+      vars:
+        UNITY_VERSION: 6000.3.11f1   # ←自分のUnityに合わせる
+
       ios_signing:
-        distribution_type: app_store
+        distribution_type: development
         bundle_identifier: com.namuna.raspberrygarden
 
-    working_directory: raspberry_garden
-
     scripts:
-      - flutter pub get
-      - xcode-project use-profiles
-      - flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
+      # Unityインストール
+      - name: Install Unity
+        script: |
+          brew install --cask unity-hub || true
+
+      # UnityでiOSビルド
+      - name: Build iOS
+        script: |
+          /Applications/Unity/Hub/Editor/$UNITY_VERSION/Unity \
+          -batchmode -nographics -quit \
+          -projectPath . \
+          -buildTarget iOS \
+          -executeMethod BuildScript.BuildiOS
+
+      # XcodeでIPA化
+      - name: Build IPA
+        script: |
+          cd build/iOS
+          xcodebuild -scheme Unity-iPhone \
+          -configuration Release \
+          -archivePath build.xcarchive archive
+
+          xcodebuild -exportArchive \
+          -archivePath build.xcarchive \
+          -exportOptionsPlist /Users/builder/export_options.plist \
+          -exportPath build
 
     artifacts:
-      - build/ios/ipa/*.ipa
-
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_ID
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-
-  ios-adhoc:
-    name: iOS Ad Hoc Build (Direct install)
-    max_build_duration: 60
-    instance_type: mac_mini_m1
-
-    environment:
-      flutter: stable
-      xcode: latest
-      groups:
-        - app_store_credentials
-      ios_signing:
-        distribution_type: ad_hoc
-        bundle_identifier: com.namuna.raspberrygarden
-
-    working_directory: raspberry_garden
-
-    scripts:
-      - flutter pub get
-      - xcode-project use-profiles
-      - flutter build ipa --release --export-options-plist=/Users/builder/export_options.plist
-
-    artifacts:
-      - build/ios/ipa/*.ipa
+      - build/iOS/build/*.ipa
