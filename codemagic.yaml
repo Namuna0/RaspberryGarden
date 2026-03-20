@@ -7,28 +7,29 @@ workflows:
     environment:
       xcode: latest
       vars:
-        UNITY_VERSION: 6000.0.39f1
+        UNITY_VERSION: 6000.0.59f2
 
       ios_signing:
         distribution_type: ad_hoc
         bundle_identifier: com.namuna.raspberrygarden
 
     scripts:
-      # Unityインストール（公式推奨）
+      # Unityインストール（GameCI）
       - name: Install Unity
         script: |
-          brew install unity-editor@${UNITY_VERSION} || true
+          curl -L https://github.com/game-ci/unity-install/releases/latest/download/install.sh | bash
+          unity-install --version ${UNITY_VERSION}
 
-      # UnityでiOSプロジェクト生成
-      - name: Build iOS (Unity)
+      # Unityビルド
+      - name: Build iOS
         script: |
-          /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity \
+          unity-editor \
           -batchmode -nographics -quit \
           -projectPath . \
           -buildTarget iOS \
           -executeMethod BuildScript.BuildiOS
 
-      # IPA作成（Ad Hoc）
+      # IPA作成
       - name: Build IPA
         script: |
           cd build/iOS
@@ -39,13 +40,10 @@ workflows:
 
           cat > exportOptions.plist <<EOF
           <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
               <key>method</key>
               <string>ad-hoc</string>
-              <key>signingStyle</key>
-              <string>automatic</string>
           </dict>
           </plist>
           EOF
