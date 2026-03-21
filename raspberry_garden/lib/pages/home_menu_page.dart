@@ -13,21 +13,30 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fade;
 
-  final List<String> _logs = []; // 会話ログ（保存しない）
+  final List<String> _logs = [];
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+
     _fade = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
       value: 1.0,
     );
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _fade.reverse();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+
+      try {
+        await _fade.reverse().timeout(const Duration(milliseconds: 300));
+      } catch (_) {}
+
+      if (!mounted) return;
+      _focusNode.requestFocus();
     });
   }
 
@@ -36,10 +45,11 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     _fade.dispose();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty) return;
 
@@ -48,14 +58,6 @@ class _HomeMenuPageState extends State<HomeMenuPage>
       _textCtrl.clear();
     });
 
-    // Discord送信（今まで通り）
-    sendDiscordMessage(
-      baseUrl: 'https://goddessutarea-production.up.railway.app',
-      apiKey: 'API_TEST',
-      message: text,
-    );
-
-    // 一番下へスクロール
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
@@ -65,10 +67,24 @@ class _HomeMenuPageState extends State<HomeMenuPage>
         );
       }
     });
+
+    try {
+      await sendDiscordMessage(
+        baseUrl: 'https://goddessutarea-production.up.railway.app',
+        apiKey: 'API_TEST',
+        message: text,
+      );
+    } catch (e) {
+      debugPrint('sendDiscordMessage error: $e');
+    }
+
+    if (mounted) {
+      _focusNode.requestFocus();
+    }
   }
 
   void _openImageDialog(String assetPath) {
-    showDialog(
+    showDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black54,
@@ -81,7 +97,10 @@ class _HomeMenuPageState extends State<HomeMenuPage>
             child: InteractiveViewer(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.asset(assetPath, fit: BoxFit.contain),
+                child: Image.asset(
+                  assetPath,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
           ),
@@ -97,7 +116,6 @@ class _HomeMenuPageState extends State<HomeMenuPage>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 背景
           GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: () => _openImageDialog('assets/images/dialog.png'),
@@ -107,10 +125,9 @@ class _HomeMenuPageState extends State<HomeMenuPage>
             ),
           ),
 
-          // 会話ログ表示
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 32, 8, 72),
+              padding: const EdgeInsets.fromLTRB(8, 32, 8, 110),
               child: ListView.builder(
                 controller: _scrollCtrl,
                 itemCount: _logs.length,
@@ -132,40 +149,51 @@ class _HomeMenuPageState extends State<HomeMenuPage>
             ),
           ),
 
-          // 入力バー
           Positioned(
-            left: 0,
-            right: 0,
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _textCtrl,
-                      decoration: const InputDecoration(
-                        hintText: 'メッセージを入力',
-                        border: OutlineInputBorder(),
-                        filled: true,
-                        fillColor: Colors.white,
+            left: 8,
+            right: 8,
+            bottom: 20,
+            child: SafeArea(
+              top: false,
+              child: Material(
+                color: Colors.transparent,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        focusNode: _focusNode,
+                        controller: _textCtrl,
+                        textInputAction: TextInputAction.send,
+                        decoration: const InputDecoration(
+                          hintText: 'メッセージを入力',
+                          border: OutlineInputBorder(),
+                          filled: true,
+                          fillColor: Colors.white,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 14,
+                          ),
+                        ),
+                        onSubmitted: (_) => _sendMessage(),
                       ),
-                      onSubmitted: (_) => _sendMessage(),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.send),
-                    onPressed: _sendMessage,
-                    color: Colors.white,
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _sendMessage,
+                      icon: const Icon(Icons.send),
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
 
-          // フェード（最前面）
-          WhiteFadeOverlay(animation: _fade, curve: Curves.easeOut),
+          WhiteFadeOverlay(
+            animation: _fade,
+            curve: Curves.easeOut,
+          ),
         ],
       ),
     );
