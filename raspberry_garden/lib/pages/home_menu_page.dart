@@ -1,8 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import '../routes/application_api.dart';
+import '../controllers/home_menu_controller.dart';
 import '../routes/white_fade.dart';
+import '../widgets/chat_input_bar.dart';
+import '../widgets/chat_message_list.dart';
 
 class HomeMenuPage extends StatefulWidget {
   const HomeMenuPage({super.key});
@@ -14,16 +14,13 @@ class HomeMenuPage extends StatefulWidget {
 class _HomeMenuPageState extends State<HomeMenuPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fade;
+  late final HomeMenuController _controller;
 
-  final List<DiscordMessage> _logs = [];
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  Timer? _pollingTimer;
-
-  static const String _baseUrl =
-      'https://goddessutarea-production.up.railway.app';
+  static const String _baseUrl = 'https://goddessutarea-production.up.railway.app';
   static const String _apiKey = 'API_TEST';
 
   @override
@@ -36,6 +33,13 @@ class _HomeMenuPageState extends State<HomeMenuPage>
       value: 1.0,
     );
 
+    _controller = HomeMenuController(
+      baseUrl: _baseUrl,
+      apiKey: _apiKey,
+    );
+
+    _controller.addListener(_onMessagesUpdated);
+
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
@@ -45,15 +49,15 @@ class _HomeMenuPageState extends State<HomeMenuPage>
 
       if (!mounted) return;
 
-      await _refreshMessages(scrollToBottom: true);
-      _startPolling();
+      await _controller.initialize();
       _focusNode.requestFocus();
     });
   }
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
+    _controller.removeListener(_onMessagesUpdated);
+    _controller.dispose();
     _fade.dispose();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
@@ -61,61 +65,20 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     super.dispose();
   }
 
-  void _startPolling() {
-    _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      await _refreshMessages();
+  void _onMessagesUpdated() {
+    if (!mounted) return;
+
+    setState(() {});
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
     });
-  }
-
-  Future<void> _refreshMessages({bool scrollToBottom = false}) async {
-    try {
-      final messages = await fetchDiscordMessages(
-        baseUrl: _baseUrl,
-        apiKey: _apiKey,
-      );
-
-      if (!mounted) return;
-
-      final oldLength = _logs.length;
-      final changed = _hasMessageChanged(messages);
-
-      if (!changed) return;
-
-      setState(() {
-        _logs
-          ..clear()
-          ..addAll(messages);
-      });
-
-      if (scrollToBottom || messages.length > oldLength) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollCtrl.hasClients) {
-            _scrollCtrl.animateTo(
-              _scrollCtrl.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-            );
-          }
-        });
-      }
-    } catch (e) {
-      debugPrint('fetchDiscordMessages error: $e');
-    }
-  }
-
-  bool _hasMessageChanged(List<DiscordMessage> newMessages) {
-    if (_logs.length != newMessages.length) return true;
-
-    for (int i = 0; i < _logs.length; i++) {
-      if (_logs[i].user != newMessages[i].user ||
-          _logs[i].content != newMessages[i].content ||
-          _logs[i].time != newMessages[i].time) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   Future<void> _sendMessage() async {
@@ -126,14 +89,9 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     setState(() {});
 
     try {
-      await sendDiscordMessage(
-        baseUrl: _baseUrl,
-        apiKey: _apiKey,
-        message: text,
-      );
-      await _refreshMessages(scrollToBottom: true);
+      await _controller.sendMessage(text);
     } catch (e) {
-      debugPrint('sendDiscordMessage error: $e');
+      debugPrint('sendMessage error: $e');
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -172,14 +130,10 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     );
   }
 
-  String _formatTime(DateTime dt) {
-    final hh = dt.hour.toString().padLeft(2, '0');
-    final mm = dt.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
-  }
-
   @override
   Widget build(BuildContext context) {
+    final messages = _controller.messages;
+
     return Scaffold(
       resizeToAvoidBottomInset: false,
       body: Stack(
@@ -193,47 +147,15 @@ class _HomeMenuPageState extends State<HomeMenuPage>
               fit: BoxFit.cover,
             ),
           ),
-
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 32, 8, 110),
-              child: ListView.builder(
-                controller: _scrollCtrl,
-                itemCount: _logs.length,
-                itemBuilder: (_, index) {
-                  final msg = _logs[index];
-
-                  return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 3),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.6),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${msg.user}  ${_formatTime(msg.time.toLocal())}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          msg.content,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+              child: ChatMessageList(
+                messages: messages,
+                scrollController: _scrollCtrl,
               ),
             ),
           ),
-
           Positioned(
             left: 8,
             right: 8,
@@ -242,39 +164,14 @@ class _HomeMenuPageState extends State<HomeMenuPage>
               top: false,
               child: Material(
                 color: Colors.transparent,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        focusNode: _focusNode,
-                        controller: _textCtrl,
-                        textInputAction: TextInputAction.send,
-                        decoration: const InputDecoration(
-                          hintText: 'メッセージを入力',
-                          border: OutlineInputBorder(),
-                          filled: true,
-                          fillColor: Colors.white,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 14,
-                          ),
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      onPressed: _sendMessage,
-                      icon: const Icon(Icons.send),
-                      color: const Color(0xFFFF64AA),
-                    ),
-                  ],
+                child: ChatInputBar(
+                  controller: _textCtrl,
+                  focusNode: _focusNode,
+                  onSend: _sendMessage,
                 ),
               ),
             ),
           ),
-
           WhiteFadeOverlay(
             animation: _fade,
             curve: Curves.easeOut,

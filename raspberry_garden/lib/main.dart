@@ -11,6 +11,7 @@ class AppEntry extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const MaterialApp(
+      title: 'Raspberry Garden',
       debugShowCheckedModeBanner: false,
       home: SplashPage(),
     );
