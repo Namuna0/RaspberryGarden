@@ -1,39 +1,20 @@
 workflows:
   unity-ios:
     name: Unity iOS AdHoc Build
-    max_build_duration: 120
+    max_build_duration: 60
     instance_type: mac_mini_m1
 
     environment:
       xcode: latest
       vars:
         UNITY_VERSION: 2022.3.22f1
-        UNITY_CHANGESET: 887be4894c44
 
       ios_signing:
         distribution_type: ad_hoc
         bundle_identifier: com.namuna.raspberrygarden
 
-    cache:
-      cache_paths:
-        - /Users/builder/Library/Unity
-
     scripts:
-      # Unity Hubインストール
-      - name: Install Unity Hub
-        script: |
-          brew install --cask unity-hub || true
-
-      # Unityインストール（タイムアウト対策付き）
-      - name: Install Unity Editor
-        script: |
-          timeout 3600 /Applications/Unity\ Hub.app/Contents/MacOS/Unity\ Hub \
-          -- --headless install \
-          --version $UNITY_VERSION \
-          --changeset $UNITY_CHANGESET \
-          -m ios
-
-      # Unityビルド
+      # Unityビルド（インストール不要想定）
       - name: Build iOS
         script: |
           /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity \
@@ -42,7 +23,7 @@ workflows:
           -buildTarget iOS \
           -executeMethod BuildScript.BuildiOS
 
-      # IPA作成（Ad Hoc）
+      # IPA作成
       - name: Build IPA
         script: |
           cd build/iOS
