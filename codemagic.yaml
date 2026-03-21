@@ -1,58 +1,44 @@
 workflows:
   unity-ios:
-    name: Unity iOS AdHoc Build
+    name: Unity iOS Build
     max_build_duration: 60
     instance_type: mac_mini_m1
 
     environment:
       xcode: latest
       vars:
-        UNITY_VERSION: 6000.3.11f1
+        UNITY_VERSION: 6000.3.11f1   # ←自分のUnityに合わせる
 
       ios_signing:
-        distribution_type: ad_hoc
+        distribution_type: development
         bundle_identifier: com.namuna.raspberrygarden
 
     scripts:
-      # Unityインストール（公式推奨）
+      # Unityインストール
       - name: Install Unity
         script: |
-          brew install unity-editor@${UNITY_VERSION} || true
+          brew install --cask unity-hub || true
 
-      # UnityでiOSプロジェクト生成
-      - name: Build iOS (Unity)
+      # UnityでiOSビルド
+      - name: Build iOS
         script: |
-          /Applications/Unity/Hub/Editor/${UNITY_VERSION}/Unity \
+          /Applications/Unity/Hub/Editor/$UNITY_VERSION/Unity \
           -batchmode -nographics -quit \
           -projectPath . \
           -buildTarget iOS \
           -executeMethod BuildScript.BuildiOS
 
-      # IPA作成（Ad Hoc）
+      # XcodeでIPA化
       - name: Build IPA
         script: |
           cd build/iOS
-
           xcodebuild -scheme Unity-iPhone \
           -configuration Release \
           -archivePath build.xcarchive archive
 
-          cat > exportOptions.plist <<EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-              <key>method</key>
-              <string>ad-hoc</string>
-              <key>signingStyle</key>
-              <string>automatic</string>
-          </dict>
-          </plist>
-          EOF
-
           xcodebuild -exportArchive \
           -archivePath build.xcarchive \
-          -exportOptionsPlist exportOptions.plist \
+          -exportOptionsPlist /Users/builder/export_options.plist \
           -exportPath build
 
     artifacts:
