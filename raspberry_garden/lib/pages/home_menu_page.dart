@@ -135,7 +135,7 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     final messages = _controller.messages;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         fit: StackFit.expand,
         children: [
