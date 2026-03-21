@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../routes/application_api.dart';
 import '../routes/white_fade.dart';
@@ -13,10 +15,16 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fade;
 
-  final List<String> _logs = [];
+  final List<DiscordMessage> _logs = [];
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focusNode = FocusNode();
+
+  Timer? _pollingTimer;
+
+  static const String _baseUrl =
+      'https://goddessutarea-production.up.railway.app';
+  static const String _apiKey = 'API_TEST';
 
   @override
   void initState() {
@@ -36,12 +44,16 @@ class _HomeMenuPageState extends State<HomeMenuPage>
       } catch (_) {}
 
       if (!mounted) return;
+
+      await _refreshMessages(scrollToBottom: true);
+      _startPolling();
       _focusNode.requestFocus();
     });
   }
 
   @override
   void dispose() {
+    _pollingTimer?.cancel();
     _fade.dispose();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
@@ -49,33 +61,84 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     super.dispose();
   }
 
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      await _refreshMessages();
+    });
+  }
+
+  Future<void> _refreshMessages({bool scrollToBottom = false}) async {
+    try {
+      final messages = await fetchDiscordMessages(
+        baseUrl: _baseUrl,
+        apiKey: _apiKey,
+      );
+
+      if (!mounted) return;
+
+      final oldLength = _logs.length;
+      final changed = _hasMessageChanged(messages);
+
+      if (!changed) return;
+
+      setState(() {
+        _logs
+          ..clear()
+          ..addAll(messages);
+      });
+
+      if (scrollToBottom || messages.length > oldLength) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollCtrl.hasClients) {
+            _scrollCtrl.animateTo(
+              _scrollCtrl.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('fetchDiscordMessages error: $e');
+    }
+  }
+
+  bool _hasMessageChanged(List<DiscordMessage> newMessages) {
+    if (_logs.length != newMessages.length) return true;
+
+    for (int i = 0; i < _logs.length; i++) {
+      if (_logs[i].user != newMessages[i].user ||
+          _logs[i].content != newMessages[i].content ||
+          _logs[i].time != newMessages[i].time) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   Future<void> _sendMessage() async {
     final text = _textCtrl.text.trim();
     if (text.isEmpty) return;
 
-    setState(() {
-      _logs.add(text);
-      _textCtrl.clear();
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    _textCtrl.clear();
+    setState(() {});
 
     try {
       await sendDiscordMessage(
-        baseUrl: 'https://goddessutarea-production.up.railway.app',
-        apiKey: 'API_TEST',
+        baseUrl: _baseUrl,
+        apiKey: _apiKey,
         message: text,
       );
+      await _refreshMessages(scrollToBottom: true);
     } catch (e) {
       debugPrint('sendDiscordMessage error: $e');
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('送信に失敗しました: $e')),
+      );
     }
 
     if (mounted) {
@@ -109,6 +172,12 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     );
   }
 
+  String _formatTime(DateTime dt) {
+    final hh = dt.hour.toString().padLeft(2, '0');
+    final mm = dt.minute.toString().padLeft(2, '0');
+    return '$hh:$mm';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,16 +201,32 @@ class _HomeMenuPageState extends State<HomeMenuPage>
                 controller: _scrollCtrl,
                 itemCount: _logs.length,
                 itemBuilder: (_, index) {
+                  final msg = _logs[index];
+
                   return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(10),
+                    margin: const EdgeInsets.symmetric(vertical: 3),
+                    padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.6),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      _logs[index],
-                      style: const TextStyle(color: Colors.white),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${msg.user}  ${_formatTime(msg.time.toLocal())}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          msg.content,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -182,7 +267,7 @@ class _HomeMenuPageState extends State<HomeMenuPage>
                     IconButton(
                       onPressed: _sendMessage,
                       icon: const Icon(Icons.send),
-                      color: Colors.white,
+                      color: const Color(0xFFFF64AA),
                     ),
                   ],
                 ),
