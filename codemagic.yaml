@@ -7,7 +7,7 @@ workflows:
     environment:
       xcode: latest
       vars:
-        UNITY_VERSION: 6000.0.39f1
+        UNITY_VERSION: 6000.3.11f1
 
       ios_signing:
         distribution_type: ad_hoc
