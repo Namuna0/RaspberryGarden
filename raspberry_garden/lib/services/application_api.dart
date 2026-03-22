@@ -6,6 +6,7 @@ Future<void> sendDiscordMessage({
   required String baseUrl,
   required String apiKey,
   required String message,
+  required String appUserId,
 }) async {
   final uri = Uri.parse('$baseUrl/api/discord/send');
 
@@ -17,6 +18,7 @@ Future<void> sendDiscordMessage({
     },
     body: jsonEncode({
       'message': message,
+      'appUserId': appUserId,
     }),
   );
 

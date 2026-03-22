@@ -7,10 +7,12 @@ class HomeMenuController extends ChangeNotifier {
   HomeMenuController({
     required this.baseUrl,
     required this.apiKey,
+    required this.appUserId,
   });
 
   final String baseUrl;
   final String apiKey;
+  final String appUserId;
 
   final List<DiscordMessage> _messages = [];
   Timer? _pollingTimer;
@@ -24,7 +26,7 @@ class HomeMenuController extends ChangeNotifier {
 
   void startPolling() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       await refreshMessages();
     });
   }
@@ -53,6 +55,7 @@ class HomeMenuController extends ChangeNotifier {
       baseUrl: baseUrl,
       apiKey: apiKey,
       message: text,
+      appUserId: appUserId,
     );
 
     await refreshMessages();
@@ -64,12 +67,17 @@ class HomeMenuController extends ChangeNotifier {
     for (int i = 0; i < _messages.length; i++) {
       if (_messages[i].user != newMessages[i].user ||
           _messages[i].content != newMessages[i].content ||
-          _messages[i].time != newMessages[i].time) {
+          _messages[i].time != newMessages[i].time ||
+          _messages[i].appUserId != newMessages[i].appUserId) {
         return true;
       }
     }
 
     return false;
+  }
+
+  bool isMyMessage(DiscordMessage message) {
+    return message.appUserId != null && message.appUserId == appUserId;
   }
 
   @override

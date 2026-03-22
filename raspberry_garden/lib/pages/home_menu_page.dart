@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../controllers/home_menu_controller.dart';
 import '../routes/white_fade.dart';
+import '../services/app_user_service.dart';
 import '../widgets/chat_input_bar.dart';
 import '../widgets/chat_message_list.dart';
 
@@ -14,13 +15,13 @@ class HomeMenuPage extends StatefulWidget {
 class _HomeMenuPageState extends State<HomeMenuPage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _fade;
-  late final HomeMenuController _controller;
+  HomeMenuController? _controller;
 
   final TextEditingController _textCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  static const String _baseUrl = 'https://goddessutarea-production.up.railway.app';
+  static const String _baseUrl = 'http://localhost:8080';
   static const String _apiKey = 'API_TEST';
 
   @override
@@ -33,31 +34,38 @@ class _HomeMenuPageState extends State<HomeMenuPage>
       value: 1.0,
     );
 
-    _controller = HomeMenuController(
-      baseUrl: _baseUrl,
-      apiKey: _apiKey,
-    );
-
-    _controller.addListener(_onMessagesUpdated);
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
 
       try {
-        await _fade.reverse().timeout(const Duration(milliseconds: 300));
+        await _fade.reverse().timeout(const Duration(milliseconds: 500));
       } catch (_) {}
 
       if (!mounted) return;
 
-      await _controller.initialize();
+      final appUserId = await AppUserService.getOrCreateAppUserId();
+
+      final controller = HomeMenuController(
+        baseUrl: _baseUrl,
+        apiKey: _apiKey,
+        appUserId: appUserId,
+      );
+
+      controller.addListener(_onMessagesUpdated);
+
+      setState(() {
+        _controller = controller;
+      });
+
+      await controller.initialize();
       _focusNode.requestFocus();
     });
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onMessagesUpdated);
-    _controller.dispose();
+    _controller?.removeListener(_onMessagesUpdated);
+    _controller?.dispose();
     _fade.dispose();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
@@ -82,6 +90,9 @@ class _HomeMenuPageState extends State<HomeMenuPage>
   }
 
   Future<void> _sendMessage() async {
+    final controller = _controller;
+    if (controller == null) return;
+
     final text = _textCtrl.text.trim();
     if (text.isEmpty) return;
 
@@ -89,7 +100,7 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     setState(() {});
 
     try {
-      await _controller.sendMessage(text);
+      await controller.sendMessage(text);
     } catch (e) {
       debugPrint('sendMessage error: $e');
 
@@ -132,7 +143,7 @@ class _HomeMenuPageState extends State<HomeMenuPage>
 
   @override
   Widget build(BuildContext context) {
-    final messages = _controller.messages;
+    final controller = _controller;
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -149,17 +160,20 @@ class _HomeMenuPageState extends State<HomeMenuPage>
           ),
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 32, 8, 110),
-              child: ChatMessageList(
-                messages: messages,
-                scrollController: _scrollCtrl,
-              ),
+              padding: const EdgeInsets.fromLTRB(8, 0, 8, 58),
+              child: controller == null
+                  ? const SizedBox.shrink()
+                  : ChatMessageList(
+                      messages: controller.messages,
+                      scrollController: _scrollCtrl,
+                      isMyMessage: controller.isMyMessage,
+                    ),
             ),
           ),
           Positioned(
             left: 8,
             right: 8,
-            bottom: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 8,
             child: SafeArea(
               top: false,
               child: Material(
