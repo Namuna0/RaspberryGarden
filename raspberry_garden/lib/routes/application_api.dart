@@ -49,3 +49,41 @@ Future<List<DiscordMessage>> fetchDiscordMessages({
       .map((e) => DiscordMessage.fromJson(e as Map<String, dynamic>))
       .toList();
 }
+
+Future<List<String>> fetchSkillSuggestions({
+  required String baseUrl,
+  required String apiKey,
+  required String query,
+}) async {
+  final uri = Uri.parse('$baseUrl/api/database/suggest').replace(
+    queryParameters: {'q': query},
+  );
+
+  final res = await http.get(uri, headers: {'X-API-KEY': apiKey});
+
+  if (res.statusCode != 200) {
+    throw Exception('Failed: ${res.statusCode} ${res.body}');
+  }
+
+  final data = jsonDecode(res.body) as List<dynamic>;
+  return data.map((e) => e.toString()).toList();
+}
+
+Future<String?> fetchSkillText({
+  required String baseUrl,
+  required String apiKey,
+  required String id,
+}) async {
+  final uri = Uri.parse('$baseUrl/api/database/${Uri.encodeComponent(id)}');
+
+  final res = await http.get(uri, headers: {'X-API-KEY': apiKey});
+
+  if (res.statusCode == 404) return null;
+
+  if (res.statusCode != 200) {
+    throw Exception('Failed: ${res.statusCode} ${res.body}');
+  }
+
+  final data = jsonDecode(res.body) as Map<String, dynamic>;
+  return data['text']?.toString();
+}
