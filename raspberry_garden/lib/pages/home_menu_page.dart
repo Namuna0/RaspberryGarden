@@ -21,7 +21,7 @@ class _HomeMenuPageState extends State<HomeMenuPage>
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  static const String _baseUrl = 'https://goddessutarea-production.up.railway.app';
+  static const String _baseUrl = 'http://localhost:8080';
   static const String _apiKey = 'API_TEST';
 
   @override
@@ -146,7 +146,7 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     final controller = _controller;
 
     return Scaffold(
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         children: [
