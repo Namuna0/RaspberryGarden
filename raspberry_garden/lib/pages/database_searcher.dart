@@ -81,6 +81,18 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
     _searchByQuery(value);
   }
 
+  Future<void> _copyResult(BuildContext context) async {
+    if (_resultText == null) return;
+    await Clipboard.setData(ClipboardData(text: _resultText!));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('コピーしました'),
+        duration: Duration(seconds: 1),
+      ),
+    );
+  }
+
   Future<void> _onSearch() async {
     final query = _searchCtrl.text.trim();
     if (query.isEmpty) return;
@@ -139,32 +151,43 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                         else if (_resultText != null)
                           Flexible(
                             child: GestureDetector(
-                              onLongPress: () async {
-                                await Clipboard.setData(
-                                    ClipboardData(text: _resultText!));
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('コピーしました'),
-                                    duration: Duration(seconds: 1),
-                                  ),
-                                );
-                              },
+                              onLongPress: () => _copyResult(context),
                               child: Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withOpacity(0.70),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: SingleChildScrollView(
-                                  child: Text(
-                                    _resultText!,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      height: 1.6,
-                                      color: Colors.white,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Align(
+                                      alignment: Alignment.topRight,
+                                      child: IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(
+                                          Icons.copy,
+                                          size: 18,
+                                          color: Colors.white70,
+                                        ),
+                                        onPressed: () => _copyResult(context),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 4),
+                                    Flexible(
+                                      child: SingleChildScrollView(
+                                        child: Text(
+                                          _resultText!,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            height: 1.6,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -184,6 +207,17 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                               children: _suggestions.map((s) {
                                 return GestureDetector(
                                   onTap: () => _onSelectSuggestion(s),
+                                  onLongPress: () async {
+                                    await Clipboard.setData(
+                                        ClipboardData(text: s));
+                                    if (!context.mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('コピーしました'),
+                                        duration: Duration(seconds: 1),
+                                      ),
+                                    );
+                                  },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 10,
