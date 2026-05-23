@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../routes/application_api.dart';
 import '../routes/white_fade.dart';
-import 'home_menu_page.dart';
 
 class DatabaseSearcher extends StatefulWidget {
   const DatabaseSearcher({super.key});
@@ -12,14 +11,11 @@ class DatabaseSearcher extends StatefulWidget {
 }
 
 class _DatabaseSearcherState extends State<DatabaseSearcher>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   static const String _baseUrl = 'https://goddessutarea-production.up.railway.app';
   static const String _apiKey = 'API_TEST';
-  static const double _menuWidth = 220;
-  static const double _edgeThreshold = 40;
 
   late final AnimationController _fade;
-  late final AnimationController _menuAnim;
   final TextEditingController _searchCtrl = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
@@ -36,10 +32,6 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
       duration: const Duration(milliseconds: 200),
       value: 1.0,
     );
-    _menuAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    );
 
     _searchCtrl.addListener(_onTextChanged);
 
@@ -52,15 +44,10 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
   @override
   void dispose() {
     _fade.dispose();
-    _menuAnim.dispose();
     _searchCtrl.dispose();
     _focusNode.dispose();
     super.dispose();
   }
-
-  void _openMenu() => _menuAnim.forward();
-
-  void _closeMenu() => _menuAnim.reverse();
 
   void _onTextChanged() {
     final query = _searchCtrl.text;
@@ -166,13 +153,15 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                             child: GestureDetector(
                               onLongPress: () => _copyResult(context),
                               child: Container(
-                                padding: const EdgeInsets.fromLTRB(12, 8, 8, 12),
+                                padding:
+                                    const EdgeInsets.fromLTRB(12, 8, 8, 12),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withOpacity(0.70),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     Align(
                                       alignment: Alignment.topRight,
@@ -184,7 +173,8 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                                           size: 18,
                                           color: Colors.white70,
                                         ),
-                                        onPressed: () => _copyResult(context),
+                                        onPressed: () =>
+                                            _copyResult(context),
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -224,7 +214,8 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                                     await Clipboard.setData(
                                         ClipboardData(text: s));
                                     if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context).showSnackBar(
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(
                                       const SnackBar(
                                         content: Text('コピーしました'),
                                         duration: Duration(seconds: 1),
@@ -237,8 +228,10 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(4),
+                                      color:
+                                          Colors.white.withOpacity(0.15),
+                                      borderRadius:
+                                          BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       s,
@@ -252,7 +245,8 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                               }).toList(),
                             ),
                           ),
-                        if (_suggestions.isNotEmpty) const SizedBox(height: 4),
+                        if (_suggestions.isNotEmpty)
+                          const SizedBox(height: 4),
                       ],
                     ),
                   ),
@@ -289,134 +283,8 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
               ),
             ),
           ),
-          // 右端スワイプ検知
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: 0,
-            width: _edgeThreshold,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onHorizontalDragUpdate: (d) {
-                if (d.delta.dx < -2) _openMenu();
-              },
-            ),
-          ),
-          // オーバーレイ背景 + メニューパネル
-          AnimatedBuilder(
-            animation: _menuAnim,
-            builder: (_, __) {
-              if (_menuAnim.value == 0) return const SizedBox.shrink();
-              final slide = CurvedAnimation(
-                parent: _menuAnim,
-                curve: Curves.easeOut,
-              );
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  // 背景タップで閉じる
-                  GestureDetector(
-                    onTap: _closeMenu,
-                    child: Container(
-                      color: Colors.black
-                          .withOpacity(0.4 * _menuAnim.value),
-                    ),
-                  ),
-                  // メニューパネル
-                  Positioned(
-                    top: 0,
-                    bottom: 0,
-                    right: (_menuWidth * (slide.value - 1)),
-                    width: _menuWidth,
-                    child: GestureDetector(
-                      onHorizontalDragUpdate: (d) {
-                        if (d.delta.dx > 2) _closeMenu();
-                      },
-                      child: Container(
-                        color: Colors.black.withOpacity(0.85),
-                        padding: EdgeInsets.only(
-                          top: MediaQuery.of(context).padding.top + 16,
-                          bottom: 16,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              child: Text(
-                                'メニュー',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.6),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Divider(color: Colors.white24),
-                            _MenuItem(
-                              icon: Icons.chat_bubble_outline,
-                              label: 'チャット',
-                              onTap: () async {
-                                _closeMenu();
-                                await Future.delayed(
-                                    const Duration(milliseconds: 200));
-                                if (!context.mounted) return;
-                                await whiteFadeReplace(
-                                  context: context,
-                                  controller: _fade,
-                                  nextPage: const HomeMenuPage(),
-                                );
-                              },
-                            ),
-                            _MenuItem(
-                              icon: Icons.search,
-                              label: '予想検索',
-                              onTap: _closeMenu,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
           WhiteFadeOverlay(animation: _fade, curve: Curves.easeOut),
         ],
-      ),
-    );
-  }
-}
-
-class _MenuItem extends StatelessWidget {
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white70, size: 20),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
-            ),
-          ],
-        ),
       ),
     );
   }

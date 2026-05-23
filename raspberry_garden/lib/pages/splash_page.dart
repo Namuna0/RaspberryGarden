@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../routes/white_fade.dart';
-import 'database_searcher.dart';
+import 'app_shell.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -36,7 +36,7 @@ class _SplashPageState extends State<SplashPage>
     await whiteFadeReplace(
       context: context,
       controller: _fade,
-      nextPage: const DatabaseSearcher(),
+      nextPage: const AppShell(),
     );
   }
 

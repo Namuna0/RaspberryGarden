@@ -16,12 +16,25 @@ class HomeMenuController extends ChangeNotifier {
 
   final List<DiscordMessage> _messages = [];
   Timer? _pollingTimer;
+  String channelName = '';
 
   List<DiscordMessage> get messages => List.unmodifiable(_messages);
 
   Future<void> initialize() async {
-    await refreshMessages();
+    await Future.wait([
+      refreshMessages(),
+      _fetchChannelName(),
+    ]);
     startPolling();
+  }
+
+  Future<void> _fetchChannelName() async {
+    try {
+      channelName = await fetchChannelName(baseUrl: baseUrl, apiKey: apiKey);
+      notifyListeners();
+    } catch (e) {
+      debugPrint('fetchChannelName error: $e');
+    }
   }
 
   void startPolling() {

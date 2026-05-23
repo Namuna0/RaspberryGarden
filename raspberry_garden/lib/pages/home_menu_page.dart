@@ -4,7 +4,6 @@ import '../routes/white_fade.dart';
 import '../services/app_user_service.dart';
 import '../widgets/chat_input_bar.dart';
 import '../widgets/chat_message_list.dart';
-import 'database_searcher.dart';
 
 class HomeMenuPage extends StatefulWidget {
   const HomeMenuPage({super.key});
@@ -14,9 +13,8 @@ class HomeMenuPage extends StatefulWidget {
 }
 
 class _HomeMenuPageState extends State<HomeMenuPage>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late final AnimationController _fade;
-  late final AnimationController _menuAnim;
   HomeMenuController? _controller;
 
   final TextEditingController _textCtrl = TextEditingController();
@@ -25,8 +23,6 @@ class _HomeMenuPageState extends State<HomeMenuPage>
 
   static const String _baseUrl = 'https://goddessutarea-production.up.railway.app';
   static const String _apiKey = 'API_TEST';
-  static const double _menuWidth = 220;
-  static const double _edgeThreshold = 40;
 
   @override
   void initState() {
@@ -36,10 +32,6 @@ class _HomeMenuPageState extends State<HomeMenuPage>
       vsync: this,
       duration: const Duration(milliseconds: 200),
       value: 1.0,
-    );
-    _menuAnim = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
     );
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -75,16 +67,11 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     _controller?.removeListener(_onMessagesUpdated);
     _controller?.dispose();
     _fade.dispose();
-    _menuAnim.dispose();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
     _focusNode.dispose();
     super.dispose();
   }
-
-  void _openMenu() => _menuAnim.forward();
-
-  void _closeMenu() => _menuAnim.reverse();
 
   void _onMessagesUpdated() {
     if (!mounted) return;
@@ -171,6 +158,29 @@ class _HomeMenuPageState extends State<HomeMenuPage>
               fit: BoxFit.cover,
             ),
           ),
+          if (controller != null && controller.channelName.isNotEmpty)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 8,
+              right: 8,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.70),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  controller.channelName,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 58),
@@ -199,134 +209,11 @@ class _HomeMenuPageState extends State<HomeMenuPage>
               ),
             ),
           ),
-          // 右端スワイプ検知
-          Positioned(
-            top: 0,
-            bottom: 0,
-            right: 0,
-            width: _edgeThreshold,
-            child: GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onHorizontalDragUpdate: (d) {
-                if (d.delta.dx < -2) _openMenu();
-              },
-            ),
-          ),
-          // オーバーレイ背景 + メニューパネル
-          AnimatedBuilder(
-            animation: _menuAnim,
-            builder: (_, __) {
-              if (_menuAnim.value == 0) return const SizedBox.shrink();
-              final slide = CurvedAnimation(
-                parent: _menuAnim,
-                curve: Curves.easeOut,
-              );
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  GestureDetector(
-                    onTap: _closeMenu,
-                    child: Container(
-                      color: Colors.black.withOpacity(0.4 * _menuAnim.value),
-                    ),
-                  ),
-                  Positioned(
-                    top: 0,
-                    bottom: 0,
-                    right: _menuWidth * (slide.value - 1),
-                    width: _menuWidth,
-                    child: GestureDetector(
-                      onHorizontalDragUpdate: (d) {
-                        if (d.delta.dx > 2) _closeMenu();
-                      },
-                      child: Container(
-                        color: Colors.black.withOpacity(0.85),
-                        padding: EdgeInsets.only(
-                          top: MediaQuery.of(context).padding.top + 16,
-                          bottom: 16,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              child: Text(
-                                'メニュー',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.6),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Divider(color: Colors.white24),
-                            _MenuItem(
-                              icon: Icons.chat_bubble_outline,
-                              label: 'チャット',
-                              onTap: _closeMenu,
-                            ),
-                            _MenuItem(
-                              icon: Icons.search,
-                              label: '予想検索',
-                              onTap: () async {
-                                _closeMenu();
-                                await Future.delayed(
-                                    const Duration(milliseconds: 200));
-                                if (!context.mounted) return;
-                                await whiteFadeReplace(
-                                  context: context,
-                                  controller: _fade,
-                                  nextPage: const DatabaseSearcher(),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
           WhiteFadeOverlay(
             animation: _fade,
             curve: Curves.easeOut,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _MenuItem extends StatelessWidget {
-  const _MenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white70, size: 20),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 15),
-            ),
-          ],
-        ),
       ),
     );
   }

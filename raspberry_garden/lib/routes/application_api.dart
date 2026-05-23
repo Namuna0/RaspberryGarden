@@ -2,6 +2,22 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/discord_message.dart';
 
+Future<String> fetchChannelName({
+  required String baseUrl,
+  required String apiKey,
+}) async {
+  final uri = Uri.parse('$baseUrl/api/discord/channel');
+
+  final res = await http.get(uri, headers: {'X-API-KEY': apiKey});
+
+  if (res.statusCode != 200) {
+    throw Exception('Failed: ${res.statusCode} ${res.body}');
+  }
+
+  final data = jsonDecode(res.body) as Map<String, dynamic>;
+  return data['name']?.toString() ?? '';
+}
+
 Future<void> sendDiscordMessage({
   required String baseUrl,
   required String apiKey,
