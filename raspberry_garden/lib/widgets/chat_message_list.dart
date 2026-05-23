@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../models/discord_message.dart';
+import '../widgets/ui_helpers.dart';
 
 class ChatMessageList extends StatelessWidget {
   const ChatMessageList({
@@ -38,21 +38,13 @@ class ChatMessageList extends StatelessWidget {
       );
     }
 
-    return CircleAvatar(
+    return const CircleAvatar(
       radius: 18,
-      backgroundColor: Colors.white24,
-      child: Text(
-        msg.user.isNotEmpty ? msg.user.characters.first : '?',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      backgroundColor: Colors.transparent,
     );
   }
 
-  Widget _buildBubble(DiscordMessage msg, bool mine) {
+  Widget _buildBubble(DiscordMessage msg, bool mine, String normalizedContent) {
     return Container(
       constraints: const BoxConstraints(maxWidth: 420),
       margin: const EdgeInsets.symmetric(vertical: 3),
@@ -77,7 +69,7 @@ class ChatMessageList extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            _normalizeDiscordText(msg.content),
+            normalizedContent,
             style: const TextStyle(color: Colors.white),
           ),
         ],
@@ -93,25 +85,13 @@ class ChatMessageList extends StatelessWidget {
       itemBuilder: (context, index) {
         final msg = messages[index];
         final mine = isMyMessage(msg);
+        final normalizedContent = _normalizeDiscordText(msg.content);
 
         final avatar = _buildAvatar(msg);
-        final bubble = _buildBubble(msg, mine);
+        final bubble = _buildBubble(msg, mine, normalizedContent);
 
         return GestureDetector(
-          onLongPress: () async {
-            await Clipboard.setData(
-              ClipboardData(text: _normalizeDiscordText(msg.content)),
-            );
-
-            if (!context.mounted) return;
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('コピーしました'),
-                duration: Duration(seconds: 1),
-              ),
-            );
-          },
+          onLongPress: () => copyToClipboard(context, normalizedContent),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(

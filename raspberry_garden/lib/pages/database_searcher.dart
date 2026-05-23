@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../config/app_config.dart';
 import '../routes/application_api.dart';
 import '../routes/white_fade.dart';
+import '../widgets/ui_helpers.dart';
 
 class DatabaseSearcher extends StatefulWidget {
   const DatabaseSearcher({super.key});
@@ -12,17 +14,14 @@ class DatabaseSearcher extends StatefulWidget {
 
 class _DatabaseSearcherState extends State<DatabaseSearcher>
     with SingleTickerProviderStateMixin {
-  static const String _baseUrl = 'https://goddessutarea-production.up.railway.app';
-  static const String _apiKey = 'API_TEST';
-
   late final AnimationController _fade;
-  final TextEditingController _searchCtrl = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  final _searchCtrl = TextEditingController();
+  final _focusNode = FocusNode();
 
   List<String> _suggestions = [];
   String? _resultText;
-  bool _loadingSuggestions = false;
   bool _loadingResult = false;
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -43,6 +42,7 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _fade.dispose();
     _searchCtrl.dispose();
     _focusNode.dispose();
@@ -55,15 +55,17 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
       setState(() => _suggestions = []);
       return;
     }
-    _fetchSuggestions(query);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      _fetchSuggestions(query);
+    });
   }
 
   Future<void> _fetchSuggestions(String query) async {
-    setState(() => _loadingSuggestions = true);
     try {
       final results = await fetchSkillSuggestions(
-        baseUrl: _baseUrl,
-        apiKey: _apiKey,
+        baseUrl: AppConfig.baseUrl,
+        apiKey: AppConfig.apiKey,
         query: query,
       );
       if (!mounted) return;
@@ -72,25 +74,7 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
       }
     } catch (e) {
       debugPrint('fetchSuggestions error: $e');
-    } finally {
-      if (mounted) setState(() => _loadingSuggestions = false);
     }
-  }
-
-  void _onSelectSuggestion(String value) {
-    _searchByQuery(value);
-  }
-
-  Future<void> _copyResult(BuildContext context) async {
-    if (_resultText == null) return;
-    await Clipboard.setData(ClipboardData(text: _resultText!));
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('コピーしました'),
-        duration: Duration(seconds: 1),
-      ),
-    );
   }
 
   Future<void> _onSearch() async {
@@ -108,8 +92,8 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
 
     try {
       final text = await fetchSkillText(
-        baseUrl: _baseUrl,
-        apiKey: _apiKey,
+        baseUrl: AppConfig.baseUrl,
+        apiKey: AppConfig.apiKey,
         id: query,
       );
       if (!mounted) return;
@@ -151,14 +135,12 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                         else if (_resultText != null)
                           Flexible(
                             child: GestureDetector(
-                              onLongPress: () => _copyResult(context),
+                              onLongPress: () =>
+                                  copyToClipboard(context, _resultText!),
                               child: Container(
                                 padding:
                                     const EdgeInsets.fromLTRB(12, 8, 8, 12),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.70),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                                decoration: darkRoundedBox(),
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
@@ -174,7 +156,7 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                                           color: Colors.white70,
                                         ),
                                         onPressed: () =>
-                                            _copyResult(context),
+                                            copyToClipboard(context, _resultText!),
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -200,38 +182,23 @@ class _DatabaseSearcherState extends State<DatabaseSearcher>
                         if (_suggestions.isNotEmpty)
                           Container(
                             padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.70),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                            decoration: darkRoundedBox(),
                             child: Wrap(
                               spacing: 4,
                               runSpacing: 4,
                               children: _suggestions.map((s) {
                                 return GestureDetector(
-                                  onTap: () => _onSelectSuggestion(s),
-                                  onLongPress: () async {
-                                    await Clipboard.setData(
-                                        ClipboardData(text: s));
-                                    if (!context.mounted) return;
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      const SnackBar(
-                                        content: Text('コピーしました'),
-                                        duration: Duration(seconds: 1),
-                                      ),
-                                    );
-                                  },
+                                  onTap: () => _searchByQuery(s),
+                                  onLongPress: () =>
+                                      copyToClipboard(context, s),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 10,
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withOpacity(0.15),
-                                      borderRadius:
-                                          BorderRadius.circular(4),
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
                                       s,

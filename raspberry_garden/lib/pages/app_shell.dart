@@ -54,7 +54,6 @@ class _AppShellState extends State<AppShell>
               DatabaseSearcher(),
             ],
           ),
-          // 右端スワイプ検知
           Positioned(
             top: 0,
             bottom: 0,
@@ -67,7 +66,6 @@ class _AppShellState extends State<AppShell>
               },
             ),
           ),
-          // オーバーレイメニュー
           AnimatedBuilder(
             animation: _menuAnim,
             builder: (_, __) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_config.dart';
 import '../controllers/home_menu_controller.dart';
 import '../routes/white_fade.dart';
 import '../services/app_user_service.dart';
@@ -17,12 +18,9 @@ class _HomeMenuPageState extends State<HomeMenuPage>
   late final AnimationController _fade;
   HomeMenuController? _controller;
 
-  final TextEditingController _textCtrl = TextEditingController();
-  final ScrollController _scrollCtrl = ScrollController();
-  final FocusNode _focusNode = FocusNode();
-
-  static const String _baseUrl = 'https://goddessutarea-production.up.railway.app';
-  static const String _apiKey = 'API_TEST';
+  final _textCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  final _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -46,8 +44,8 @@ class _HomeMenuPageState extends State<HomeMenuPage>
       final appUserId = await AppUserService.getOrCreateAppUserId();
 
       final controller = HomeMenuController(
-        baseUrl: _baseUrl,
-        apiKey: _apiKey,
+        baseUrl: AppConfig.baseUrl,
+        apiKey: AppConfig.apiKey,
         appUserId: appUserId,
       );
 
@@ -97,7 +95,6 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     if (text.isEmpty) return;
 
     _textCtrl.clear();
-    setState(() {});
 
     try {
       await controller.sendMessage(text);
@@ -146,7 +143,7 @@ class _HomeMenuPageState extends State<HomeMenuPage>
     final controller = _controller;
 
     return Scaffold(
-      resizeToAvoidBottomInset: true,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         fit: StackFit.expand,
         children: [
